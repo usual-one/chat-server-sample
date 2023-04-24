@@ -1,9 +1,10 @@
-import { SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
+import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
 import {IRawMessage} from '../models/message';
 import {MessageService} from '../services/message.service';
+import { WebSocket } from 'ws';
 
 
-@WebSocketGateway()
+@WebSocketGateway(3081, { transports: 'websockets' })
 export class MessageGateway {
 
   constructor(
@@ -11,9 +12,15 @@ export class MessageGateway {
   ) {}
 
   @SubscribeMessage('message')
-  public handleReceive(client: any, payload: IRawMessage): string {
-    const message = this.service.create(payload);
-    return 'Hello world!';
+  public handleReceive(
+    @MessageBody() body: IRawMessage,
+    @ConnectedSocket() socket: WebSocket,
+  ): void {
+    const message = this.service.create(body);
+    socket.send(JSON.stringify({
+      event: 'message',
+      data: message,
+    }));
   }
 
 }
