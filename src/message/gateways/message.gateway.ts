@@ -11,16 +11,27 @@ export class MessageGateway {
     private readonly service: MessageService,
   ) {}
 
+  private readonly userMap = new Map<string, WebSocket>();
+
+  @SubscribeMessage('auth')
+  public handleAuth(
+    @MessageBody() body: { userId: string },
+    @ConnectedSocket() socket: WebSocket,
+  ): void {
+    this.userMap.set(body.userId, socket);
+  }
+
   @SubscribeMessage('message')
   public handleReceive(
     @MessageBody() body: IRawMessage,
-    @ConnectedSocket() socket: WebSocket,
   ): void {
     const message = this.service.create(body);
-    socket.send(JSON.stringify({
-      event: 'message',
-      data: message,
-    }));
+    for (const connection of this.userMap.values()) {
+      connection.send(JSON.stringify({
+        event: 'message',
+        data: message,
+      }));
+    }
   }
 
 }
